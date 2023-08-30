@@ -11,6 +11,12 @@ const constantRoutes = [
         name:'test',
         component:()=>import('@/views/test/index.vue'),
         meta:{title:'测试'}
+    },
+    {
+        path:'/pdf',
+        name:'pdf',
+        component:()=>import('@/views/pdf/index.vue'),
+        meta:{title:'测试'}
     }
 ]
 

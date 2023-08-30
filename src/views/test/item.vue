@@ -3,8 +3,10 @@
 </template>
 
 <script setup>
-    import {ref,defineExpose,defineProps} from 'vue'
-    defineProps(['title'])
+    import {ref} from 'vue'
+    let props = defineProps(['title'])
+
+    console.log(props.title,999);
 
     let name = ref('child')
     let a = 'hello'
