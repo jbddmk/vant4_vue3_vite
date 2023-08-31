@@ -39,7 +39,7 @@
     </div>
 
     <!-- 复现克隆区域 -->
-    <div class="sign sign-one-copy" style="display: none"  data-type="1" data-id="user-id-001">
+    <div class="sign sign-one-copy" style="display: none" :style="{width:personalImgWScale+'px',height:personalImgHScale+'px'}"  data-type="1" data-id="user-id-001">
         <div class="sign-one sign-img child">
             <img src=""/>
         </div>
@@ -66,6 +66,7 @@
                     showToast('缺少全局变量');
                 }
             })
+            let scaleReal = ref(0)
 
             const USE_ONLY_CSS_ZOOM = true;
             const TEXT_LAYER_MODE = 0; // DISABLE
@@ -123,10 +124,10 @@
 
                     return loadingTask.promise.then(
                         function (pdfDocument) {
-                            pdfDocument.getPage(1).then(function(page) {
-                                let viewport = page.getViewport({ scale: 1, });
-                                console.log(viewport,112233)
-                            });
+                            // pdfDocument.getPage(1).then(function(page) {
+                            //     let viewport = page.getViewport({ scale: 1, });
+                            //     console.log(viewport,'--原生大小--')
+                            // });
                             // Document loaded, specifying document for the viewer.
                             self.pdfDocument = pdfDocument;
                             self.pdfViewer.setDocument(pdfDocument);
@@ -134,6 +135,11 @@
                             self.pdfHistory.initialize({
                                 fingerprint: pdfDocument.fingerprints[0],
                             });
+                            // console.log(self.pdfViewer._pages,222)
+                            // let scale1 = self.pdfViewer._pages[0].viewport.scale
+                            // let width1 = self.pdfViewer._pages[0].viewport.width
+                            // let w22 = scale1 * width1
+                            // console.log(w22,1122)
 
                             self.loadingBar.hide();
                             self.setTitleUsingMetadata(pdfDocument);
@@ -480,14 +486,6 @@
                 },
             };
             window.PDFViewerApplication = PDFViewerApplication;
-            // document.addEventListener(
-            //     "DOMContentLoaded",
-            //     function () {
-            //         console.log(9989999)
-            //         PDFViewerApplication.initUI();
-            //     },
-            //     true
-            // );
             onMounted(() => {
                 PDFViewerApplication.initUI();
             })
@@ -497,12 +495,19 @@
             animationStarted.then(function () {
                 PDFViewerApplication.open({
                     url: DEFAULT_URL,
-                }).then(()=>{
+                }).then((res)=>{
                     setTimeout(()=>{
+                        scaleReal.value = PDFViewerApplication.pdfViewer._pages[0].viewport.scale
+                        setSignSize()
                         reviewSign()
                     },1000)
                 });
             });
+            // nextTick(()=>{
+            //     setTimeout(()=>{
+            //         console.log(PDFViewerApplication.pdfViewer._pages,1122)
+            //     },100)
+            // })
             //印章宽高
             let signwidth = 50
             let signheight = 30
@@ -510,25 +515,23 @@
             const personalImgW = 151
             const personalImgH = 60
             //缩放后-控制显示大小
-            let personalImgWScale = ref(0)
-            let personalImgHScale = ref(0)
+            const personalImgWScale = ref(0)
+            const personalImgHScale = ref(0)
             //公章
             const publicImgW = 160
             const publicImgH = 160
             let publicImgWScale = ref(0)
             let publicImgHScale = ref(0)
             //设置印章大小
-            nextTick(()=>{
-                let scale = PDFViewerApplication.pdfViewer.currentScale * pdfjsLib.PixelsPerInch.PDF_TO_CSS_UNITS
-                console.log(pdfjsLib.PixelsPerInch.PDF_TO_CSS_UNITS,'22222211111')
+            function setSignSize(){
+                let scale = scaleReal.value
                 personalImgWScale.value = parseFloat(personalImgW * scale)
                 personalImgHScale.value = parseFloat(personalImgH * scale)
                 publicImgWScale.value = parseFloat(publicImgW * scale)
                 publicImgHScale.value = parseFloat(publicImgH * scale)
-                console.log(scale,'--缩放比例--')
-            })
+            }
 
-            //添加印章
+            //drag to create sign
             nextTick(()=>{
                 $('.sign-one').on('touchstart',function(e){
                     let page = PDFViewerApplication.page
@@ -542,6 +545,16 @@
                     let pageHeight =  $('#viewer > .page[data-page-number="'+page+'"]').height()
                     $(cloneDom).addClass('sign-one-add')
                     $(cloneDom).data('page',page)
+                    let t = $(cloneDom).data('type')
+                    if(t==1){
+                        //personal
+                        signwidth = personalImgWScale.value
+                        signheight = personalImgHScale.value
+                    }else{
+                        //公章
+                        signwidth = publicImgWScale.value
+                        signheight = publicImgHScale.value
+                    }
                     $(document).on('touchmove',function(ev){
                         let x= ev.originalEvent.targetTouches[0].pageX
                         let y= ev.originalEvent.targetTouches[0].pageY
@@ -582,6 +595,16 @@
                     let sumX = startx - startLeft
                     let sumY = starty - startTop
                     let that = $(this)
+                    let t = $(this).data('type')
+                    if(t==1){
+                        //personal
+                        signwidth = personalImgWScale.value
+                        signheight = personalImgHScale.value
+                    }else{
+                        //公章
+                        signwidth = publicImgWScale.value
+                        signheight = publicImgHScale.value
+                    }
                     $(this).on('touchmove',function(ev){
                         let x = ev.originalEvent.targetTouches[0].pageX
                         let y = ev.originalEvent.targetTouches[0].pageY
@@ -609,8 +632,17 @@
 
             function save(){
                 let arr= []
-                let scale = PDFViewerApplication.pdfViewer.currentScale;
+                let scale = scaleReal.value;
                 $('.sign-one-add').each(function(key,val){
+                    let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
+                    let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
+                    let type = val.getAttribute('data-type')
+                    let id = val.getAttribute('data-id')
+                    let page = $(val).data('page')
+                    arr.push({top:top,left:left,type:type,imgId:id,page:page})
+                })
+                //历史
+                $('.review-sign-one').each(function(key,val){
                     let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
                     let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
                     let type = val.getAttribute('data-type')
@@ -622,7 +654,7 @@
                 localStorage.setItem('signData',JSON.stringify(arr))
                 showToast('保存成功')
             }
-            //保存
+            //绑定保存事件
             nextTick(()=>{
                 $('#save').click(function(){
                     save()
@@ -632,24 +664,24 @@
             //复原
             function reviewSign(){
                 let arr = JSON.parse(localStorage.getItem('signData'))
-                let scale = PDFViewerApplication.pdfViewer.currentScale;
-                console.log(arr,'last data11')
+                let scale = scaleReal.value;
                 if(!arr){
                     return
                 }
                 for(let it of arr){
-                    if(it.type==1){ //个人
+                    if(it.type==1){ // personal sign
                         let pageWith =  $('#viewer > .page[data-page-number="'+it.page+'"]').width()
                         let pageHeight =  $('#viewer > .page[data-page-number="'+it.page+'"]').height()
                         let dom = $('.sign-one-copy').clone()
                         $(dom).find('img').attr('src','./images/sign-01.png')
-                        $(dom).css({position:'absolute',top:it.top*scale+'px',left:it.left*scale+'px',display:'block'})
+                        let width = personalImgWScale.value +'px'
+                        let height = personalImgHScale.value +'px'
+                        $(dom).css({position:'absolute',top:it.top*scale+'px',left:it.left*scale+'px',display:'block',width,height})
                         $(dom).data('page',it.page)
                         $(dom).attr('data-page',it.page)
                         $(dom).removeClass('sign-one-copy')
                         $(dom).addClass('review-sign-one')
                         $('#viewer > .page[data-page-number="'+it.page+'"]').append(dom)
-                        console.log($('#viewer > .page[data-page-number="'+it.page+'"]'),111)
                         touch_move(pageWith,pageHeight,'review-sign-one')
                     }
                 }

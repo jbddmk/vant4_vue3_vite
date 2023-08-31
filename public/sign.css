@@ -6,7 +6,10 @@
     left: 0;
     top: 50%;
 }
-
+.sign-one {
+    width: 100%;
+    height: 100%;
+}
 .sign img {
     width: 100%;
     height: 100%;
