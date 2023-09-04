@@ -574,6 +574,7 @@
 
                         $(cloneDom).css({position:'absolute',top:top+'px',left:left+'px'})
                         $('#viewer > .page[data-page-number="'+page+'"]').append(cloneDom)
+                        //生成dom 绑定事件
                         touch_move(pageWith,pageHeight)
                     })
                     $(document).on('touchend',function(){
@@ -633,6 +634,7 @@
             function save(){
                 let arr= []
                 let scale = scaleReal.value;
+                //新增
                 $('.sign-one-add').each(function(key,val){
                     let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
                     let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
