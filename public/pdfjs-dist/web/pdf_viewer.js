@@ -3849,7 +3849,11 @@ class PDFPageView {
         case textLayerNode:
           continue;
       }
-      node.remove();
+      if(node.classList.contains('sign')){
+        //签章不可删
+      }else{
+        node.remove();
+      }
     }
     div.removeAttribute("data-loaded");
     if (annotationLayerNode) {

@@ -3,13 +3,20 @@ import qs from 'qs'
 import { showToast } from 'vant'
 axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 const service = axios.create({
-    baseURL: '/prod-api',
+    baseURL: '/api',
     timeout: 900000
 })
 service.interceptors.request.use(config => {
+    config.headers['Authorization'] = "Bearer eyJhbGciOiJIUzUxMiJ9.eyJ1aWQiOjE2NDYxMjU1NzY0MzYxODcxMzcsImV4cCI6MTcwNDI4MzM3MiwiaWF0IjoxNzA0Mjc2MTcyLCJ0b2tlbiI6ImViZmE2NDM0NjA0NWU3MjllNjZmZDY0OGY4NGY0NDdmIn0.Hn-hdAo_D2xRpzWF5xetuFGvT8fubrjW6Wp0_s1alhYucW3y-263t_s4XaMef4wigjzMTBC7fmLbPj_k27vQdg"
     if (config.method === 'get') {
-        if(config.params&&Object.keys(config.params).length>0){
-            config.url = config.url+'?'+qs.stringify(config.params)
+        // if(config.params&&Object.keys(config.params).length>0){
+        //     config.url = config.url+'?'+qs.stringify(config.params,{ arrayFormat: 'repeat' })
+        //     console.log(config.url,666)
+        // }
+        if (config.method === 'get') {
+            config.paramsSerializer = function(params) {
+                return qs.stringify(params, { arrayFormat: 'repeat' })
+            }
         }
     }
     return config

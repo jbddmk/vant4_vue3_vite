@@ -5,6 +5,7 @@ import {resolve} from "path";
 const pathResolve = path => resolve(process.cwd(), path)
 // https://vitejs.dev/config/
 export default defineConfig({
+    base:'/',
     plugins: [
         vue(),
         // requireTransform({
@@ -21,12 +22,27 @@ export default defineConfig({
         outDir: 'outDist'
     },
     server: {
-        open: '/',
+        https: false,
+        host: true, // host: "0.0.0.0"
+        port: 8088,
+        open: false,
+        /** 跨域设置允许 */
+        cors: true,
+        /** 端口被占用时，是否直接退出 */
+        strictPort: false,
+        /** 接口代理 */
         proxy: {
-            '^/prod-api': {
-                target: 'http://192.168.0.39:8088',
+            "/api": {
+                target: "http://192.168.0.101:8802",
+                /** 是否允许跨域 */
                 changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/prod-api/, '')
+                rewrite: (path) => path.replace(/^\/api/, "")
+            },
+            "/remotefile": {
+                target: "http://192.168.0.101",
+                /** 是否允许跨域 */
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/remotefile/, "")
             }
         }
     },
