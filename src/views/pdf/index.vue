@@ -1,7 +1,7 @@
 <template>
     <header>
       <div class="header">
-        <span class="sign-btn-open" :class="{'open-menu':toggleOpenVal}" @click="toggleOpen">签章</span>
+<!--        <span class="sign-btn-open" :class="{'open-menu':toggleOpenVal}" @click="toggleOpen">签章</span>-->
         <h1 id="title"></h1>
       </div>
     </header>
@@ -85,10 +85,22 @@
         <button v-show="false" class="toolbarButton zoomOut" title="Zoom Out" id="zoomOut"></button>
         <button v-show="false" class="toolbarButton zoomIn" title="Zoom In" id="zoomIn"></button>
         <template v-if="isCanDo">
+        <button class="toolbarButton btn-sign" :class="{'open-menu':toggleOpenVal}" title="btn-sign" id="btn-sign" style="font-size: 15px" @click="toggleOpen()">签章</button>
         <button class="toolbarButton del" title="del" id="del" style="font-size: 15px" @click="delMenu()">删除</button>
         <button class="toolbarButton save" title="save" id="save" style="font-size: 15px" @click="save()">保存</button>
         </template>
     </footer>
+
+  <van-overlay :show="loading" style="z-index:20">
+    <div style="display:flex;justify-content: center;align-items: center;height:100vh;wight:100vw;">
+      <van-loading vertical color="#0094ff">
+        <template #icon>
+          <van-icon name="star-o" size="30" />
+        </template>
+        加载中...
+      </van-loading>
+    </div>
+  </van-overlay>
 </template>
 
 <script setup>
@@ -97,20 +109,24 @@
     import { showToast } from 'vant';
     import { getSealsApi,getPdfInfoByIdApi,saveSealApi } from "@/api/sign"
     const route = useRoute()
-
+    const loading = ref(0)
+    const show = ref(false)
     /** 接口参数 */
     let pdfId = ref('')
     let isCanDo = ref(0)  //数据权限,是否允许操作数据
     let signT = 0  //0签章，1补章
     let token=''
+    let apipre =''
     pdfId.value = route.query.pdfId
     signT = route.query.signT
     isCanDo.value = route.query.isCanDo
     token = route.query.token
-    if(!token||!pdfId.value||signT===undefined||isCanDo.value===undefined){
+    apipre = route.query.apipre
+    if(!token||!pdfId.value||signT===undefined||isCanDo.value===undefined||apipre===undefined){
       showToast('缺少参数');
     }
     sessionStorage.setItem('token',token)
+    sessionStorage.setItem('apipre',apipre)
     onMounted(() => {
       if (!pdfjsLib.getDocument || !pdfjsViewer.PDFViewer) {
         showToast('缺少全局变量');
@@ -749,13 +765,16 @@
         signInfoDetailDTOList:arr,
         signInfoId:pdfId.value
       }
+      loading.value =1
       saveSealApi(data).then(res=>{
+        loading.value =0
         if(res.code==0){
           showToast('签章数据保存成功')
         }else{
           showToast(res?.msg||'接口异常')
         }
       }).catch(err=>{
+        loading.value =0
         console.log(err,'--error--')
         let str = err.toString()
         str = str.replace("Error: ",'')
@@ -901,7 +920,9 @@
     /** 初始化-获取单个pdf相关数据-历史签章复现 */
     const pdfData =  ref()
     const getPdfData = () =>{
+      loading.value = 1
       getPdfInfoByIdApi(pdfId.value,signT).then(res=>{
+        loading.value =0
         if(res.code==0){
           pdfData.value = res.data
           DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
@@ -937,6 +958,8 @@
             });
           });
         }
+      }).catch(err=>{
+        loading.value = 0
       })
     }
     //切换pdf
@@ -1001,7 +1024,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: end;
+  justify-content: center;
   position:relative;
 }
 .sign-btn-open {
@@ -1045,7 +1068,15 @@
   position: absolute;
   width: 18%;
   height: 100%;
-  left: 60%;
+  left: 63%;
+  background-size: 2.4rem;
+  color: #ffffff;
+}
+.toolbarButton.btn-sign {
+  position: absolute;
+  width: 18%;
+  height: 100%;
+  left: 45%;
   background-size: 2.4rem;
   color: #ffffff;
 }

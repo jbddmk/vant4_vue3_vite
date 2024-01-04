@@ -3,10 +3,11 @@ import qs from 'qs'
 import { showToast } from 'vant'
 axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 const service = axios.create({
-    baseURL: '/api',
+    // baseURL: '/api',
     timeout: 900000
 })
 service.interceptors.request.use(config => {
+    config.baseURL = '/'+ sessionStorage.getItem('apipre')
     config.headers['Authorization'] = "Bearer " + sessionStorage.getItem('token')
     if (config.method === 'get') {
         config.paramsSerializer = function(params) {
