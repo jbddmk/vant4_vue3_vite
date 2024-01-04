@@ -41,20 +41,22 @@
         <div class="tool-sign-text">
           <span>个人章:</span>
         </div>
-        <div class="sign touch-el"  data-type="1" :data-id="it.id" :style="{width:personalImgWScale+'px',height:personalImgHScale+'px'}">
+        <div class="sign touch-el"  data-type="1" :data-signid="it.id" :style="{width:personalImgWScale+'px',height:personalImgHScale+'px'}">
           <div class="sign-one sign-img child">
             <img :src="it.sealImgPath"/>
           </div>
+          <div class="del-btn">x</div>
         </div>
       </template>
       <template v-if="it.sealType==0">
         <div class="tool-sign-text">
           <span>公章:</span>
         </div>
-        <div class="sign touch-el" data-type="0" :data-id="it.id" :style="{width:publicImgWScale+'px',height:publicImgHScale+'px'}">
+        <div class="sign touch-el" data-type="0" :data-signid="it.id" :style="{width:publicImgWScale+'px',height:publicImgHScale+'px'}">
           <div class="sign-one sign-img child">
             <img :src="it.sealImgPath"/>
           </div>
+          <div class="del-btn">x</div>
         </div>
       </template>
     </div>
@@ -66,12 +68,14 @@
         <div class="sign-img child">
             <img src=""/>
         </div>
+      <div class="del-btn">x</div>
     </div>
 <!--  公章-->
   <div class="sign sign-public-copy" style="display: none" :style="{width:publicImgWScale+'px',height:publicImgHScale+'px'}"  data-type="0" data-id="user-id-001">
     <div class="sign-img child">
       <img src=""/>
     </div>
+    <div class="del-btn">x</div>
   </div>
 
     <footer>
@@ -80,7 +84,10 @@
         <input type="number" id="pageNumber" class="toolbarField pageNumber" value="1" size="4" min="1">
         <button v-show="false" class="toolbarButton zoomOut" title="Zoom Out" id="zoomOut"></button>
         <button v-show="false" class="toolbarButton zoomIn" title="Zoom In" id="zoomIn"></button>
+        <template v-if="isCanDo">
+        <button class="toolbarButton del" title="del" id="del" style="font-size: 15px" @click="delMenu()">删除</button>
         <button class="toolbarButton save" title="save" id="save" style="font-size: 15px" @click="save()">保存</button>
+        </template>
     </footer>
 </template>
 
@@ -88,23 +95,29 @@
     import {onMounted,nextTick,ref,watch} from 'vue'
     import { useRoute,useRouter } from 'vue-router'
     import { showToast } from 'vant';
-    import { getSealsApi,getPdfInfoByIdApi } from "@/api/sign"
+    import { getSealsApi,getPdfInfoByIdApi,saveSealApi } from "@/api/sign"
+    const route = useRoute()
 
+    /** 接口参数 */
+    let pdfId = ref('')
+    let isCanDo = ref(0)  //数据权限,是否允许操作数据
+    let signT = 0  //0签章，1补章
+    let token=''
+    pdfId.value = route.query.pdfId
+    signT = route.query.signT
+    isCanDo.value = route.query.isCanDo
+    token = route.query.token
+    if(!token||!pdfId.value||signT===undefined||isCanDo.value===undefined){
+      showToast('缺少参数');
+    }
+    sessionStorage.setItem('token',token)
     onMounted(() => {
       if (!pdfjsLib.getDocument || !pdfjsViewer.PDFViewer) {
         showToast('缺少全局变量');
       }
     })
-    const route = useRoute()
-    const router = useRouter()
-
-    /** 接口参数 */
-    let pdfId = ref('')
-    let signT = 0  //0签章，1补章
-    let isCanDo = ''  //数据权限,是否允许操作数据
-    pdfId.value = route.query.pdfId
-    signT = route.query.signT
-    isCanDo = route.query.isCanDo
+    //总页码数
+    const allPages = ref(0)
     //签章数据
     const signData = ref([])
     /** 缩放控制相关 */
@@ -116,6 +129,8 @@
         bindMove()
       }
     }
+    /** 删除图标控制*/
+    const isDel = ref(false)
     /** pdf相关配置 */
     const USE_ONLY_CSS_ZOOM = true;
     const TEXT_LAYER_MODE = 0; // DISABLE
@@ -525,7 +540,6 @@
             function (evt) {
               const page = evt.pageNumber;
               const numPages = PDFViewerApplication.pagesCount;
-              console.log(evt,999)
               document.getElementById("pageNumber").value = page;
               document.getElementById("previous").disabled = page <= 1;
               document.getElementById("next").disabled = page >= numPages;
@@ -558,6 +572,22 @@
       publicImgWScale.value = parseFloat(publicImgW * scale)
       publicImgHScale.value = parseFloat(publicImgH * scale)
     }
+    /** 删除签章 */
+    const delMenu = ()=>{
+      isDel.value = !isDel.value
+      $('.sign[data-first=1]').each(function(){
+        let auth = $(this).data('auth')
+        if(auth==1){
+          let str = isDel.value?'block':'none'
+          $(this).find('.del-btn').css('display',str).bind('click',function(){
+            //删除操作
+            let uid = $(this).parent().data('uniqueid')
+            $('.sign[data-uniqueid='+uid+']').remove()
+          })
+
+        }
+      })
+    }
 
     /** 绑定拖动事件*/
     const isCanClick = ref(1)
@@ -568,6 +598,11 @@
         isCanClick.value = false
         let page = PDFViewerApplication.page
         let cloneDom = $(this).clone()
+        let uniqueid = new Date().valueOf()
+        $(cloneDom).attr('data-uniqueid',uniqueid)
+        $(cloneDom).attr('data-first',1)
+        $(cloneDom).data('uniqueid',uniqueid)
+        $(cloneDom).data('auth',1)
         $(cloneDom).removeClass('touch-el')
         let offset = $('#viewer > .page[data-page-number="'+page+'"]').offset()
         let pageLeft = offset.left
@@ -627,6 +662,7 @@
         if(auth==0){
           return
         }
+        let uniqueid = $(this).data('uniqueid')
         let startLeft = $(this).position().left
         let startTop = $(this).position().top
         let startx = e.originalEvent.targetTouches[0].pageX
@@ -662,13 +698,26 @@
           }
           $(that).css({top:top+'px',left:left+'px'})
           ev.preventDefault()
+          moveByFirst(uniqueid,left,top)
         })
         // $(this).on('touchend',function(){
         //     $(this).off('touchmove')
         // })
       })
     }
-
+    /**
+     * move by first
+     * */
+    const moveByFirst = (uniqueId,x,y) =>{
+      let doms = document.querySelectorAll("[data-uniqueid='"+uniqueId+"'][data-first='2']")
+      for(let item of doms){
+        item.style.left = x +"px"
+        item.style.top = y + "px"
+      }
+    }
+    /** save data
+     * includes add or history
+     * */
     function save(){
       let arr= []
       let scale = scaleReal.value;
@@ -676,61 +725,165 @@
       $('.sign-one-add').each(function(key,val){
         let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
         let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
-        let type = val.getAttribute('data-type')
-        let id = val.getAttribute('data-id')
-        let page = $(val).data('page')
-        let path = $(val).find('img').attr('src')
-        arr.push({top:top,left:left,type:type,imgId:id,page:page,auth:0,imgPath:path})
+        let orgSealId = val.getAttribute('data-signid')
+        let uniqueid = val.getAttribute('data-uniqueid')
+        let pageNum = $(val).data('page')
+        let ruleType = 3
+        let rule = pageNum
+        arr.push({id:'',coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,ruleType,rule,uniqueId:uniqueid})
       })
       //历史
       $('.review-sign-one').each(function(key,val){
         let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
         let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
-        let type = val.getAttribute('data-type')
-        let id = val.getAttribute('data-id')
-        let page = $(val).data('page')
-        let path = $(val).find('img').attr('src')
-        arr.push({top:top,left:left,type:type,imgId:id,page:page,auth:1,imgPath:path})
+        let id = $(val).data('id')
+        let orgSealId = $(val).data('orgSealId')
+        let pageNum = $(val).data('page')
+        let uniqueid = $(val).data('uniqueid')
+        let ruleType = $(val).data('ruleType')
+        let rule = $(val).data('rule')
+        arr.push({coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,id,ruleType,rule,uniqueId:uniqueid})
       })
-      console.log(arr,'--保存--')
-      localStorage.setItem('signData',JSON.stringify(arr))
-      showToast('保存成功')
+      // localStorage.setItem('signData',JSON.stringify(arr))
+      let data = {
+        signInfoDetailDTOList:arr,
+        signInfoId:pdfId.value
+      }
+      saveSealApi(data).then(res=>{
+        if(res.code==0){
+          showToast('签章数据保存成功')
+        }else{
+          showToast(res?.msg||'接口异常')
+        }
+      }).catch(err=>{
+        console.log(err,'--error--')
+        let str = err.toString()
+        str = str.replace("Error: ",'')
+        str = JSON.parse(str)
+        showToast(str?.msg||'保存失败')
+
+      })
     }
 
     //复原
     function reviewSign(){
-      // JSON.parse(localStorage.getItem('signData'))
       let arr = signData.value
-      let scale = scaleReal.value;
-      console.log(scale,99)
-      if(!arr){
+      if(arr.length==0){
         return
       }
       for(let it of arr){
-        let pageWith =  $('#viewer > .page[data-page-number="'+it.page+'"]').width()
-        let pageHeight =  $('#viewer > .page[data-page-number="'+it.page+'"]').height()
-        let dom
-        if(it.type==1){
-          dom = $('.sign-one-copy').clone()
-        }else{
-          dom = $('.sign-public-copy').clone()
+        if(it.rule==0){ //全部
+          for (let i = 0; i < allPages.value; i++) {
+            if (i == 0) {
+              createDom(it,i+1,1)
+            } else {
+              createDom(it,i+1,2)
+            }
+          }
+        }else if(/(,|-)/ig.test(it.rule)){
+          //自定义
+          let str = it.rule
+          let pages = getPagesByRule(str) //页码
+          let pagesNoRep = [] //去重后页码
+          if (arrHasRepeat(pages)) {
+            pagesNoRep = [...new Set(pages)]
+          } else {
+            pagesNoRep = pages
+          }
+          pagesNoRep && pagesNoRep.forEach((p,i) => {
+            if (i==0) {
+              createDom(it,p,1)
+            } else {
+              createDom(it,p,2)
+            }
+          })
+        }else if(/^\d+/ig.test(it.rule)){ //单页
+          createDom(it,it.rule,1)
         }
-        $(dom).find('img').attr('src',it.path)
-        let width = it.type==1 ? personalImgWScale.value +'px' : publicImgWScale.value +'px'
-        let height = it.type==1 ? personalImgHScale.value +'px': publicImgHScale.value +'px'
-        $(dom).css({position:'absolute',top:it.top*scale+'px',left:it.left*scale+'px',display:'block',width,height})
-        $(dom).data('page',it.page)
-        $(dom).data('auth',it.auth)
-        $(dom).attr('data-page',it.page)
-        $(dom).removeClass('sign-one-copy')
-        $(dom).removeClass('sign-public-copy')
+      }
+    }
+    /**
+     * @ first  是否为初代元素
+     * */
+    const createDom = (it,toPage,first=1)=>{
+      let scale = scaleReal.value
+      let pageWith =  $('#viewer > .page[data-page-number="'+toPage+'"]').width()
+      let pageHeight =  $('#viewer > .page[data-page-number="'+toPage+'"]').height()
+      let dom
+      if(it.type==1){
+        dom = $('.sign-one-copy').clone()
+      }else{
+        dom = $('.sign-public-copy').clone()
+      }
+      $(dom).find('img').attr('src',it.path)
+      let width = it.type==1 ? personalImgWScale.value +'px' : publicImgWScale.value +'px'
+      let height = it.type==1 ? personalImgHScale.value +'px': publicImgHScale.value +'px'
+      $(dom).css({position:'absolute',top:it.top*scale+'px',left:it.left*scale+'px',display:'block',width,height})
+      $(dom).data('page',it.page)
+      $(dom).data('uniqueid',it.uniqueId)
+      $(dom).data('id',it.id)
+      $(dom).data('ruleType',it.ruleType)
+      $(dom).data('rule',it.rule)
+      $(dom).data('type',it.type)
+      $(dom).data('orgSealId',it.orgSealId)
+      $(dom).data('first',first)
+      $(dom).attr('data-first',first)
+
+      $(dom).attr('data-uniqueid',it.uniqueId) //查询使用
+      $(dom).attr('data-page',it.page)
+      $(dom).removeClass('sign-one-copy')
+      $(dom).removeClass('sign-public-copy')
+      $(dom).find('img').attr('src',it.imgPath)
+      if(first==1){
         $(dom).addClass('review-sign-one')
-        $(dom).find('img').attr('src',it.imgPath)
-        $('#viewer > .page[data-page-number="'+it.page+'"]').append(dom)
+        $(dom).data('auth',it.auth)
+      }else{
+        $(dom).addClass('review-sign-two')
+        $(dom).data('auth',0)
+      }
+      $('#viewer > .page[data-page-number="'+toPage+'"]').append(dom)
+      if(first==1){
         touch_move(pageWith,pageHeight,'review-sign-one')
       }
     }
 
+
+    /**
+     * 规则处理,获取页码数组
+     * @str 规则字符串
+     * */
+    const getPagesByRule = (str)=> {
+      let pagesAll = []
+      let arr = str.split(",").filter(it => {
+        return it != ""
+      })
+      let rule =/-/
+      arr.forEach(it=>{
+        let isMore = rule.test(it)
+        if(isMore){
+          let [a,b] = it.split("-")
+          let start = parseInt(a)
+          let end = parseInt(b)
+          for(let i=start;i<=end;i++){
+            pagesAll.push(i)
+          }
+        }else{
+          pagesAll.push(parseInt(it))
+        }
+      })
+      pagesAll.sort(function(a,b){return a-b})
+      return pagesAll
+    }
+    /**
+     * 判断是否有重复元素
+     * return true 有重复元素
+     * */
+    const arrHasRepeat = (arr)=>{
+      if(new Set(arr).size != arr.length){
+        return true
+      }
+      return false
+    }
     /** 印章数据*/
     const sealList = ref([])
     const getSigns = ()=>{
@@ -745,7 +898,7 @@
       getSigns()
     })
 
-    /** 获取单个pdf相关数据-历史签章复现 */
+    /** 初始化-获取单个pdf相关数据-历史签章复现 */
     const pdfData =  ref()
     const getPdfData = () =>{
       getPdfInfoByIdApi(pdfId.value,signT).then(res=>{
@@ -757,11 +910,11 @@
               top: it.coordinateY,
               left: it.coordinateX,
               page: it.pageNum,
-              imgId: it.orgSealId,//印章id
+              orgSealId: it.orgSealId,//印章id
               ruleType: it.ruleType,// 1全部，2自定义，3单个印章（没有克隆）
               rule: it.rule, // 克隆规则（页码组成，在那些页码生成印章）
               auth: it.signAuth,
-              type: it.sealType,
+              type: it.sealType, // 1个人 0公章
               id: it.id,
               ...it
             }
@@ -777,7 +930,7 @@
             }).then((res)=>{
               setTimeout(()=>{
                 scaleReal.value = PDFViewerApplication.pdfViewer._pages[0].viewport.scale
-                console.log(PDFViewerApplication.pdfViewer._pages[0].viewport,11)
+                allPages.value = PDFViewerApplication.pdfViewer._pages.length
                 setSignSize()
                 reviewSign()
               },1000)
@@ -797,7 +950,7 @@
 
 <style lang="less" scoped>
 .left-too-bar {
-  width:30%;
+  width:20%;
   height:90vh;
   position:fixed;
   top:50px;
@@ -809,17 +962,26 @@
 }
 .tool-item {
   position: relative;
-  height:150px;
+  height:130px;
+  padding-top:10px;
 }
 .sign {
   height: 30px;
   width: 50px;
   overflow: hidden;
   position: absolute;
-  left: 0;
+  right: 2px;
   //top: 10%;
   opacity: 1;
   z-index: 11;
+}
+.del-btn {
+  position:absolute;
+  top:-5px;
+  right:0;
+  font-size:30px;
+  color: #006fff;
+  display:none;
 }
 .tool-sign-text {
   font-size: 18px;
@@ -839,7 +1001,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: end;
   position:relative;
 }
 .sign-btn-open {
@@ -878,5 +1040,20 @@
 
 .open-menu {
   color: #4095e8;
+}
+.toolbarButton.del {
+  position: absolute;
+  width: 18%;
+  height: 100%;
+  left: 60%;
+  background-size: 2.4rem;
+  color: #ffffff;
+}
+
+#title {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+
 }
 </style>

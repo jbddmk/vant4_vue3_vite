@@ -9,10 +9,17 @@ export const getSealsApi =(projectId)=>{
 }
 //获取集成信息
 export const getPdfInfoByIdApi=(id,signType)=>{
-    console.log(signType,1122)
     return request({
         url: `/sign/info/${id}`,
         method:"GET",
         params:{signType}
+    })
+}
+//保存
+export const saveSealApi =(query)=>{
+    return request({
+        url: `/sign/detail/info/processSign`,
+        method:"post",
+        data:query
     })
 }
