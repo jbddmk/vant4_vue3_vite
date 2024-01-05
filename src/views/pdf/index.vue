@@ -2,7 +2,7 @@
     <header>
       <div class="header">
 <!--        <span class="sign-btn-open" :class="{'open-menu':toggleOpenVal}" @click="toggleOpen">签章</span>-->
-        <h1 id="title"></h1>
+        <h1 id="title">{{title}}</h1>
       </div>
     </header>
 
@@ -111,6 +111,7 @@
     const route = useRoute()
     const loading = ref(0)
     const show = ref(false)
+    const title = ref('')
     /** 接口参数 */
     const projectId = ref(null)
     const pdfId = ref('')
@@ -364,7 +365,7 @@
 
       setTitle: function pdfViewSetTitle(title) {
         document.title = title;
-        document.getElementById("title").textContent = title;
+        // document.getElementById("title").textContent = title;
       },
 
       error: function pdfViewError(message, moreInfo) {
@@ -927,6 +928,7 @@
         loading.value =0
         if(res.code==0){
           pdfData.value = res.data
+          title.value = res.data?.modelName || ''
           DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
           signData.value = res.data.signDetailBos && res.data.signDetailBos.map(it => {
             return {
