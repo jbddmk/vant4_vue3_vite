@@ -109,7 +109,7 @@
     import { showToast } from 'vant';
     import { getSealsApi,getPdfInfoByIdApi,saveSealApi,repairSealApi } from "@/api/sign"
     const route = useRoute()
-    const loading = ref(0)
+    const loading = ref(false)
     const show = ref(false)
     const title = ref('')
     /** 接口参数 */
@@ -767,17 +767,17 @@
         signInfoDetailDTOList:arr,
         signInfoId:pdfId.value
       }
-      loading.value =1
+      loading.value = true
       let submitApi = signT==0 ? saveSealApi : repairSealApi
       submitApi(data).then(res=>{
-        loading.value =0
+        loading.value = false
         if(res.code==0){
           showToast('签章数据保存成功')
         }else{
           showToast(res?.msg||'接口异常')
         }
       }).catch(err=>{
-        loading.value =0
+        loading.value = false
         console.log(err,'--error--')
         let str = err.toString()
         str = str.replace("Error: ",'')
@@ -923,9 +923,9 @@
     /** 初始化-获取单个pdf相关数据-历史签章复现 */
     const pdfData =  ref()
     const getPdfData = () =>{
-      loading.value = 1
+      loading.value = true
       getPdfInfoByIdApi(pdfId.value,signT).then(res=>{
-        loading.value =0
+        loading.value = false
         if(res.code==0){
           pdfData.value = res.data
           title.value = res.data?.modelName || ''
@@ -965,7 +965,7 @@
           });
         }
       }).catch(err=>{
-        loading.value = 0
+        loading.value = false
       })
     }
     //切换pdf
