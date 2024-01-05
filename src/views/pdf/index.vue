@@ -153,10 +153,9 @@
     const USE_ONLY_CSS_ZOOM = true;
     const TEXT_LAYER_MODE = 0; // DISABLE
     const MAX_IMAGE_SIZE = 1024 * 1024;
-    const CMAP_URL = "/pdfjs-dist/cmaps/";
+    const CMAP_URL = import.meta.env.BASE_URL+ "pdfjs-dist/cmaps/";
     const CMAP_PACKED = true;
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs-dist/build/pdf.worker.js";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = import.meta.env.BASE_URL + "pdfjs-dist/build/pdf.worker.js";
 
     // let DEFAULT_URL = "/test.pdf";
     let DEFAULT_URL = ''
@@ -956,7 +955,9 @@
                 scaleReal.value = PDFViewerApplication.pdfViewer._pages[0].viewport.scale
                 allPages.value = PDFViewerApplication.pdfViewer._pages.length
                 setSignSize()
-                reviewSign()
+                if(signT==0){
+                  reviewSign()
+                }
               },1000)
             });
           });
