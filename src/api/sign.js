@@ -23,3 +23,12 @@ export const saveSealApi =(query)=>{
         data:query
     })
 }
+
+//补章
+export const repairSealApi=(query)=>{
+    return request({
+        url:`/sign/detail/info/replenishSign`,
+        method:"post",
+        data:query
+    })
+}

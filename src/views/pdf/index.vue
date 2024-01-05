@@ -107,22 +107,24 @@
     import {onMounted,nextTick,ref,watch} from 'vue'
     import { useRoute,useRouter } from 'vue-router'
     import { showToast } from 'vant';
-    import { getSealsApi,getPdfInfoByIdApi,saveSealApi } from "@/api/sign"
+    import { getSealsApi,getPdfInfoByIdApi,saveSealApi,repairSealApi } from "@/api/sign"
     const route = useRoute()
     const loading = ref(0)
     const show = ref(false)
     /** 接口参数 */
-    let pdfId = ref('')
-    let isCanDo = ref(0)  //数据权限,是否允许操作数据
+    const projectId = ref(null)
+    const pdfId = ref('')
+    const isCanDo = ref(0)  //数据权限,是否允许操作数据
     let signT = 0  //0签章，1补章
     let token=''
     let apipre =''
+    projectId.value = route.query.projectId
     pdfId.value = route.query.pdfId
     signT = route.query.signT
     isCanDo.value = route.query.isCanDo
     token = route.query.token
     apipre = route.query.apipre
-    if(!token||!pdfId.value||signT===undefined||isCanDo.value===undefined||apipre===undefined){
+    if(!token||!pdfId.value||signT===undefined||isCanDo.value===undefined||apipre===undefined||!projectId.value){
       showToast('缺少参数');
     }
     sessionStorage.setItem('token',token)
@@ -766,7 +768,8 @@
         signInfoId:pdfId.value
       }
       loading.value =1
-      saveSealApi(data).then(res=>{
+      let submitApi = signT==0 ? saveSealApi : repairSealApi
+      submitApi(data).then(res=>{
         loading.value =0
         if(res.code==0){
           showToast('签章数据保存成功')
@@ -906,8 +909,8 @@
     /** 印章数据*/
     const sealList = ref([])
     const getSigns = ()=>{
-      let projectId = '1678281382254329857' //qingdan
-      getSealsApi(projectId).then(res=>{
+      let projectIdVal = projectId.value
+      getSealsApi(projectIdVal).then(res=>{
         sealList.value = res.data.map(it=>{
           return {id:it.id,sealType:it.sealType,sealImgPath:it.sealImgPath}
         })

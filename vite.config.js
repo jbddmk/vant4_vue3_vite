@@ -5,7 +5,7 @@ import {resolve} from "path";
 const pathResolve = path => resolve(process.cwd(), path)
 // https://vitejs.dev/config/
 export default defineConfig({
-    base:'/',
+    base:'/signH5',
     plugins: [
         vue(),
         // requireTransform({
