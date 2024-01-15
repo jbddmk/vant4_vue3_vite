@@ -677,7 +677,7 @@
     function touch_move(pageWith,pageHeight,className='sign-one-add'){
       $('.'+className).on('touchstart',function(e){
         let auth = $(this).data('auth')
-        if(auth==0){
+        if(auth==0||isCanDo.value==0){
           return
         }
         let uniqueid = $(this).data('uniqueid')
@@ -929,7 +929,8 @@
         if(res.code==0){
           pdfData.value = res.data
           title.value = res.data?.modelName || ''
-          DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
+          // DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
+          DEFAULT_URL = res.data.wxSignFileUrl
           signData.value = res.data.signDetailBos && res.data.signDetailBos.map(it => {
             return {
               top: it.coordinateY,
