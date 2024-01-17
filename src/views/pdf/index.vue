@@ -84,7 +84,7 @@
         <input type="number" id="pageNumber" class="toolbarField pageNumber" value="1" size="4" min="1">
         <button v-show="false" class="toolbarButton zoomOut" title="Zoom Out" id="zoomOut"></button>
         <button v-show="false" class="toolbarButton zoomIn" title="Zoom In" id="zoomIn"></button>
-        <template v-if="isCanDo">
+        <template v-if="isCanDo==1">
         <button class="toolbarButton btn-sign" :class="{'open-menu':toggleOpenVal}" title="btn-sign" id="btn-sign" style="font-size: 15px" @click="toggleOpen()">签章</button>
         <button class="toolbarButton del" title="del" id="del" style="font-size: 15px" @click="delMenu()">删除</button>
         <button class="toolbarButton save" title="save" id="save" style="font-size: 15px" @click="save()">保存</button>
