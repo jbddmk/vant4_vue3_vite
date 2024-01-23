@@ -48,9 +48,9 @@ service.interceptors.response.use(res => {
         } else if (message.includes("timeout")) {
             message = "系统接口请求超时";
         } else if (message.includes("Request failed with status code")) {
-            let msg = error.response.data.msg
+            let msg = error.response?.data?.msg??"系统接口" + message.substr(message.length - 3) + "异常";
             message = msg
-            // message = "系统接口" + message.substr(message.length - 3) + "异常";
+
         }
         showToast(message);
         return Promise.reject(error)
