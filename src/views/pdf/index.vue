@@ -855,7 +855,7 @@
       $(dom).attr('data-page',it.page)
       $(dom).removeClass('sign-one-copy')
       $(dom).removeClass('sign-public-copy')
-      $(dom).find('img').attr('src',it.imgPath)
+      $(dom).find('img').attr('src',it.wxImgPath)
       if(first==1){
         $(dom).addClass('review-sign-one')
         $(dom).data('auth',it.auth)
