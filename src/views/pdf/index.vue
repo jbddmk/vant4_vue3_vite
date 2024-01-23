@@ -912,7 +912,7 @@
       let projectIdVal = projectId.value
       getSealsApi(projectIdVal).then(res=>{
         sealList.value = res.data.map(it=>{
-          return {id:it.id,sealType:it.sealType,sealImgPath:it.sealImgPath}
+          return {id:it.id,sealType:it.sealType,sealImgPath:it.wxSealImgPath}
         })
       })
     }
