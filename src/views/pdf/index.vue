@@ -733,6 +733,33 @@
         item.style.top = y + "px"
       }
     }
+
+    /**
+     *  元素点击事件 - h5双击无效
+     * */
+    let isWaiting = false
+    let timer_db
+    const handleClick_db =(evt,callback=()=>{})=>{
+      evt.stopPropagation();
+      if(timer_db){
+        clearTimeout(timer_db)
+        timer_db = null
+      }
+      if(isWaiting){
+        isWaiting = false
+        callback(evt)
+      }else{
+        isWaiting = true
+        timer_db = setTimeout(function(){
+          isWaiting = false
+        },300)
+      }
+    }
+
+    /** 双击回调*/
+    const signDbClick = (e)=>{
+      console.log(e,9966)
+    }
     /** save data
      * includes add or history
      * */
@@ -865,6 +892,7 @@
       }
       $('#viewer > .page[data-page-number="'+toPage+'"]').append(dom)
       if(first==1){
+        $(dom).on("click",e=>handleClick_db(e,signDbClick))
         touch_move(pageWith,pageHeight,'review-sign-one')
       }
     }
@@ -929,8 +957,8 @@
         if(res.code==0){
           pdfData.value = res.data
           title.value = res.data?.modelName || ''
-          // DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
-          DEFAULT_URL = res.data.wxSignFileUrl
+          DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
+          // DEFAULT_URL = res.data.wxSignFileUrl
           signData.value = res.data.signDetailBos && res.data.signDetailBos.map(it => {
             return {
               top: it.coordinateY,
