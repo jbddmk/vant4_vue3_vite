@@ -101,17 +101,31 @@
       </van-loading>
     </div>
   </van-overlay>
+  <van-dialog v-model:show="show" title="设置印章插入页" show-cancel-button @confirm="createMore" @cancel="cancelMore" :before-close="checkMore">
+    <div class="form-top">
+      <van-radio-group v-model="form.ruleType" direction="horizontal">
+        <van-radio name="1">全部</van-radio>
+        <van-radio name="2">自定义</van-radio>
+      </van-radio-group>
+    </div>
+    <div class="form-center">
+      <van-cell-group inset v-show="form.ruleType==2">
+        <van-field v-model="form.rule" label="页码" placeholder="请输入" />
+      </van-cell-group>
+    </div>
+  </van-dialog>
 </template>
 
 <script setup>
     import {onMounted,nextTick,ref,watch} from 'vue'
     import { useRoute,useRouter } from 'vue-router'
-    import { showToast } from 'vant';
+    import { showToast} from 'vant';
     import { getSealsApi,getPdfInfoByIdApi,saveSealApi,repairSealApi } from "@/api/sign"
     const route = useRoute()
     const loading = ref(false)
     const show = ref(false)
     const title = ref('')
+    const form = ref({ ruleType:'',rule:'' })
     /** 接口参数 */
     const projectId = ref(null)
     const pdfId = ref('')
@@ -630,7 +644,11 @@
         let pageWith =  $('#viewer > .page[data-page-number="'+page+'"]').width()
         let pageHeight =  $('#viewer > .page[data-page-number="'+page+'"]').height()
         $(cloneDom).addClass('sign-one-add')
+        $(cloneDom).addClass('sign-first')
         $(cloneDom).data('page',page)
+        $(cloneDom).data('id','')
+        let orgSealId = $(cloneDom).attr('data-signid')
+        $(cloneDom).data('orgSealId',orgSealId)
         let t = $(cloneDom).data('type')
         if(t==1){
           //personal
@@ -641,6 +659,7 @@
           signwidth = publicImgWScale.value
           signheight = publicImgHScale.value
         }
+        $(cloneDom).on("click",e=>handleClick_db(e,signDbClick))
         $(document).on('touchmove',function(ev){
           let x= ev.originalEvent.targetTouches[0].pageX
           let y= ev.originalEvent.targetTouches[0].pageY
@@ -757,8 +776,118 @@
     }
 
     /** 双击回调*/
+    const currentSignDom = ref('')
     const signDbClick = (e)=>{
-      console.log(e,9966)
+      let dom = e.currentTarget
+      currentSignDom.value = dom
+      show.value = true
+    }
+
+    const validateFree = (value) => {
+      if (form.value.ruleType == 1) {
+        return true
+      }
+      if (!value) {
+        showToast("页码不能为空")
+        return false
+      }
+      if(/^\d+$/.test(value)){
+        if(value>allPages.value){
+          showToast("不能大于总页码数")
+          return false
+        }
+      }
+      if(allPages.value == 1 && value!=1){
+         showToast("目前只有一页、页码请输入1")
+        return false
+      }
+
+      let rules = /^((\d+-\d+,)|(\d+,))*((\d+-\d+)|\d+)$/
+      if (!rules.test(value)) {
+        showToast("请按规则输入")
+        return false
+      } else if(!checkRule(value)) {
+        showToast("请检查是否有页码重复、区间开始数字大于等于结束数字、或者存在0页码、是否有页码大于总页码数")
+        return false
+      }
+      return true
+    };
+    //规则验证
+    const checkRule = (str)=>{
+      let pages= []
+      let arrs = str.split(",")
+      let isGo = true
+      arrs.forEach(it=>{
+        let reg = /-/
+        if(reg.test(it)){
+          let [a,b] = it.split("-")
+          let start = parseInt(a)
+          let end = parseInt(b)
+          if(start >= end){
+            isGo = false
+          }else {
+            if(isGo){
+              for(let i=start;i<=end;i++){
+                if(i==0||i>allPages.value){
+                  isGo = false
+                }
+                pages.push(i)
+              }
+            }
+          }
+        }else{
+          if(it==0||it>allPages.value){
+            isGo = false
+          }
+          pages.push(parseInt(it))
+        }
+      })
+
+      if(!isGo){
+        return false
+      }
+      if((new Set(pages)).size != pages.length){
+        return false
+      }
+      return true
+    }
+    const checkMore = (action)=>{
+      if(action == 'confirm'){
+        return validateFree(form.value.rule)
+      }else{
+        return true
+      }
+    }
+
+    /** 多签章，根据页码规则批量生成*/
+    const createMore = ()=>{
+      let scale = scaleReal.value
+      let dom = currentSignDom.value
+      let id =''
+      let top = $(dom).css('top').replace(/px/ig,'')
+      let left = $(dom).css('left').replace(/px/ig,'')
+      let orgSealId = $(dom).data('orgSealId')
+      let ruleType = form.value.ruleType
+      let rule = form.value.rule
+      let auth = 1
+      let type = $(dom).data('type')
+      let uniqueId = new Date().getTime()
+      let path = $(dom).find('img').attr('src')
+      if($(dom).hasClass('sign-one-add')){
+      }else{
+        id = $(dom).data('id')
+      }
+      //生成
+      let arr = [{id,top:(top/scale).toFixed(3),left:(left/scale).toFixed(3),orgSealId,ruleType,rule,auth,type,uniqueId,path}]
+      beforeCreateDom(arr)
+      let uid = $(dom).data('uniqueid')
+      $('.sign[data-uniqueid='+uid+']').remove()
+    }
+    const cancelMore = ()=>{
+        form.value = {
+          ruleType:''
+          ,rule:''
+        }
     }
     /** save data
      * includes add or history
@@ -766,19 +895,19 @@
     function save(){
       let arr= []
       let scale = scaleReal.value;
-      //新增
-      $('.sign-one-add').each(function(key,val){
-        let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
-        let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
-        let orgSealId = val.getAttribute('data-signid')
-        let uniqueid = val.getAttribute('data-uniqueid')
-        let pageNum = $(val).data('page')
-        let ruleType = 3
-        let rule = pageNum
-        arr.push({id:'',coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,ruleType,rule,uniqueId:uniqueid})
-      })
+      // //新增
+      // $('.sign-one-add').each(function(key,val){
+      //   let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
+      //   let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
+      //   let orgSealId = val.getAttribute('data-signid')
+      //   let uniqueid = val.getAttribute('data-uniqueid')
+      //   let pageNum = $(val).data('page')
+      //   let ruleType = 3
+      //   let rule = pageNum
+      //   arr.push({id:'',coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,ruleType,rule,uniqueId:uniqueid})
+      // })
       //历史
-      $('.review-sign-one').each(function(key,val){
+      $('.sign-first[data-first=1]').each(function(key,val){
         let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
         let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
         let id = $(val).data('id')
@@ -814,12 +943,7 @@
       })
     }
 
-    //复原
-    function reviewSign(){
-      let arr = signData.value
-      if(arr.length==0){
-        return
-      }
+    const beforeCreateDom =(arr=[])=>{
       for(let it of arr){
         if(it.rule==0){ //全部
           for (let i = 0; i < allPages.value; i++) {
@@ -850,6 +974,15 @@
           createDom(it,it.rule,1)
         }
       }
+    }
+
+    //复原
+    function reviewSign(){
+      let arr = signData.value
+      if(arr.length==0){
+        return
+      }
+      beforeCreateDom(arr)
     }
     /**
      * @ first  是否为初代元素
@@ -884,16 +1017,17 @@
       $(dom).removeClass('sign-public-copy')
       $(dom).find('img').attr('src',it.wxImgPath)
       if(first==1){
-        $(dom).addClass('review-sign-one')
+        // $(dom).addClass('review-sign-one')
+        $(dom).addClass('sign-first')
         $(dom).data('auth',it.auth)
       }else{
-        $(dom).addClass('review-sign-two')
+        // $(dom).addClass('review-sign-two')
         $(dom).data('auth',0)
       }
       $('#viewer > .page[data-page-number="'+toPage+'"]').append(dom)
       if(first==1){
         $(dom).on("click",e=>handleClick_db(e,signDbClick))
-        touch_move(pageWith,pageHeight,'review-sign-one')
+        touch_move(pageWith,pageHeight,'sign-first')
       }
     }
 
@@ -1121,5 +1255,18 @@
   text-overflow: ellipsis;
   overflow: hidden;
 
+}
+
+.form-top {
+  width:100%;
+  height:50px;
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  align-items: center;
+  padding-left: 10px;
+}
+.form-center {
+  margin-top: 10px;
 }
 </style>
