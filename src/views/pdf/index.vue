@@ -126,7 +126,9 @@
     const show = ref(false)
     const title = ref('')
     const form = ref({ ruleType:'',rule:'' })
-    /** 接口参数 */
+    /**
+     *  request params
+     * */
     const projectId = ref(null)
     const pdfId = ref('')
     const isCanDo = ref(0)  //数据权限,是否允许操作数据
@@ -144,14 +146,13 @@
     }
     sessionStorage.setItem('token',token)
     sessionStorage.setItem('apipre',apipre)
+
     onMounted(() => {
       if (!pdfjsLib.getDocument || !pdfjsViewer.PDFViewer) {
         showToast('缺少全局变量');
       }
     })
-    //总页码数
     const allPages = ref(0)
-    //签章数据
     const signData = ref([])
     /** 缩放控制相关 */
     let scaleReal = ref(0)
@@ -162,7 +163,6 @@
         bindMove()
       }
     }
-    /** 删除图标控制*/
     const isDel = ref(false)
     /** pdf相关配置 */
     const USE_ONLY_CSS_ZOOM = true;
@@ -582,21 +582,23 @@
     };
     window.PDFViewerApplication = PDFViewerApplication;
 
-    //印章宽高
+    // default width , hetght
     let signwidth = 50
     let signheight = 30
-    //个人章
+    //personal
     const personalImgW = 120
     const personalImgH = 50
-    //缩放后-控制显示大小
+    //scale size
     const personalImgWScale = ref(0)
     const personalImgHScale = ref(0)
-    //公章
+    //public
     const publicImgW = 120
     const publicImgH = 120
     let publicImgWScale = ref(0)
     let publicImgHScale = ref(0)
-    //设置印章大小
+    /**
+     * set the sizes of signs
+     * */
     function setSignSize(){
       let scale = scaleReal.value
       personalImgWScale.value = parseFloat(personalImgW * scale)
@@ -604,15 +606,16 @@
       publicImgWScale.value = parseFloat(publicImgW * scale)
       publicImgHScale.value = parseFloat(publicImgH * scale)
     }
-    /** 删除签章 */
+    /**
+     *  delete the sign and children signs, the del btn toggle
+     *  */
     const delMenu = ()=>{
       isDel.value = !isDel.value
       $('.sign[data-first=1]').each(function(){
         let auth = $(this).data('auth')
         if(auth==1){
           let str = isDel.value?'block':'none'
-          $(this).find('.del-btn').css('display',str).bind('click',function(){
-            //删除操作
+          $(this).find('.del-btn').css('display',str).unbind('click').bind('click',function(){
             let uid = $(this).parent().data('uniqueid')
             $('.sign[data-uniqueid='+uid+']').remove()
           })
@@ -621,7 +624,9 @@
       })
     }
 
-    /** 绑定拖动事件*/
+    /**
+     * drag the sign to pdf , bind moving event , the lock to prevent repeat creating
+     * */
     const isCanClick = ref(1)
     const bindMove = ()=>{
       $('.touch-el').on('touchstart',function(e){
@@ -649,13 +654,13 @@
         $(cloneDom).data('id','')
         let orgSealId = $(cloneDom).attr('data-signid')
         $(cloneDom).data('orgSealId',orgSealId)
+        $(cloneDom).data('ruleType',3)
+        $(cloneDom).data('rule',page)
         let t = $(cloneDom).data('type')
         if(t==1){
-          //personal
           signwidth = personalImgWScale.value
           signheight = personalImgHScale.value
         }else{
-          //公章
           signwidth = publicImgWScale.value
           signheight = publicImgHScale.value
         }
@@ -722,7 +727,6 @@
           let y = ev.originalEvent.targetTouches[0].pageY
           let left = x - sumX
           let top = y - sumY
-          //area limit
           if(left < 0){
             left = 0
           }else if(left > pageWith-signwidth){
@@ -754,7 +758,7 @@
     }
 
     /**
-     *  元素点击事件 - h5双击无效
+     *  watch click event to start double click
      * */
     let isWaiting = false
     let timer_db
@@ -775,12 +779,16 @@
       }
     }
 
-    /** 双击回调*/
+    /**
+     * the callback of double click
+     * */
     const currentSignDom = ref('')
     const signDbClick = (e)=>{
       let dom = e.currentTarget
       currentSignDom.value = dom
       show.value = true
+      form.value.ruleType = $(dom).data('ruleType')
+      form.value.rule = $(dom).data('rule')
     }
 
     const validateFree = (value) => {
@@ -812,7 +820,6 @@
       }
       return true
     };
-    //规则验证
     const checkRule = (str)=>{
       let pages= []
       let arrs = str.split(",")
@@ -859,7 +866,9 @@
       }
     }
 
-    /** 多签章，根据页码规则批量生成*/
+    /**
+     *  create signs by page's rule
+     */
     const createMore = ()=>{
       let scale = scaleReal.value
       let dom = currentSignDom.value
@@ -877,7 +886,6 @@
       }else{
         id = $(dom).data('id')
       }
-      //生成
       let arr = [{id,top:(top/scale).toFixed(3),left:(left/scale).toFixed(3),orgSealId,ruleType,rule,auth,type,uniqueId,path}]
       beforeCreateDom(arr)
       let uid = $(dom).data('uniqueid')
@@ -889,24 +897,13 @@
           ,rule:''
         }
     }
-    /** save data
+    /**
+     * save data
      * includes add or history
      * */
-    function save(){
+    const save = () =>{
       let arr= []
       let scale = scaleReal.value;
-      // //新增
-      // $('.sign-one-add').each(function(key,val){
-      //   let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
-      //   let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
-      //   let orgSealId = val.getAttribute('data-signid')
-      //   let uniqueid = val.getAttribute('data-uniqueid')
-      //   let pageNum = $(val).data('page')
-      //   let ruleType = 3
-      //   let rule = pageNum
-      //   arr.push({id:'',coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,ruleType,rule,uniqueId:uniqueid})
-      // })
-      //历史
       $('.sign-first[data-first=1]').each(function(key,val){
         let top = parseFloat(val.style.top.replace(/px/ig,''))/scale
         let left =parseFloat(val.style.left.replace(/px/ig,''))/scale
@@ -918,7 +915,6 @@
         let rule = $(val).data('rule')
         arr.push({coordinateY:top.toFixed(3),coordinateX:left.toFixed(3),orgSealId,pageNum,id,ruleType,rule,uniqueId:uniqueid})
       })
-      // localStorage.setItem('signData',JSON.stringify(arr))
       let data = {
         signInfoDetailDTOList:arr,
         signInfoId:pdfId.value
@@ -945,7 +941,7 @@
 
     const beforeCreateDom =(arr=[])=>{
       for(let it of arr){
-        if(it.rule==0){ //全部
+        if(it.rule==0){
           for (let i = 0; i < allPages.value; i++) {
             if (i == 0) {
               createDom(it,i+1,1)
@@ -954,7 +950,6 @@
             }
           }
         }else if(/(,|-)/ig.test(it.rule)){
-          //自定义
           let str = it.rule
           let pages = getPagesByRule(str) //页码
           let pagesNoRep = [] //去重后页码
@@ -976,7 +971,9 @@
       }
     }
 
-    //复原
+    /**
+     * review sign by history data
+     * */
     function reviewSign(){
       let arr = signData.value
       if(arr.length==0){
@@ -985,7 +982,8 @@
       beforeCreateDom(arr)
     }
     /**
-     * @ first  是否为初代元素
+     * create signs in the current page
+     * @param first  use it to distinguish the level of sign
      * */
     const createDom = (it,toPage,first=1)=>{
       let scale = scaleReal.value
@@ -1017,11 +1015,9 @@
       $(dom).removeClass('sign-public-copy')
       $(dom).find('img').attr('src',it.wxImgPath)
       if(first==1){
-        // $(dom).addClass('review-sign-one')
         $(dom).addClass('sign-first')
         $(dom).data('auth',it.auth)
       }else{
-        // $(dom).addClass('review-sign-two')
         $(dom).data('auth',0)
       }
       $('#viewer > .page[data-page-number="'+toPage+'"]').append(dom)
@@ -1033,8 +1029,8 @@
 
 
     /**
-     * 规则处理,获取页码数组
-     * @str 规则字符串
+     * get array of pages by rule
+     * @param str , which is the rule , resove it to get the pages
      * */
     const getPagesByRule = (str)=> {
       let pagesAll = []
@@ -1059,7 +1055,7 @@
       return pagesAll
     }
     /**
-     * 判断是否有重复元素
+     * check repeat page
      * return true 有重复元素
      * */
     const arrHasRepeat = (arr)=>{
@@ -1068,7 +1064,9 @@
       }
       return false
     }
-    /** 印章数据*/
+    /**
+     *  get signs data
+     *  */
     const sealList = ref([])
     const getSigns = ()=>{
       let projectIdVal = projectId.value
@@ -1082,7 +1080,9 @@
       getSigns()
     })
 
-    /** 初始化-获取单个pdf相关数据-历史签章复现 */
+    /**
+     * init to get the data of pdf and review signs
+     * */
     const pdfData =  ref()
     const getPdfData = () =>{
       loading.value = true
@@ -1099,8 +1099,8 @@
               left: it.coordinateX,
               page: it.pageNum,
               orgSealId: it.orgSealId,//印章id
-              ruleType: it.ruleType,// 1全部，2自定义，3单个印章（没有克隆）
-              rule: it.rule, // 克隆规则（页码组成，在那些页码生成印章）
+              ruleType: it.ruleType,// 1全部，2自定义，3单页
+              rule: it.rule, // 克隆规则
               auth: it.signAuth,
               type: it.sealType, // 1个人 0公章
               id: it.id,
@@ -1131,7 +1131,7 @@
         loading.value = false
       })
     }
-    //切换pdf
+    // watch the pdf to update data
     watch(pdfId,()=>{
       getPdfData()
     },{
