@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+    import wx from 'weixin-js-sdk'
     import {onMounted,nextTick,ref,watch} from 'vue'
     import { useRoute,useRouter } from 'vue-router'
     import { showToast} from 'vant';
@@ -925,6 +926,18 @@
         loading.value = false
         if(res.code==0){
           showToast('签章数据保存成功')
+
+          // 小程序返回两次问题
+          wx.miniProgram.getEnv(res => {
+            // 如果小程序中打开
+            if (res.miniprogram) {
+              history.pushState({ page: 1 }, null, window.location.href);
+              // 监听popstate事件
+              window.addEventListener('popstate', (event) => {
+                wx.miniProgram.navigateBack();
+              });
+            }
+          })
         }else{
           showToast(res?.msg||'接口异常')
         }
