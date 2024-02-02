@@ -112,6 +112,20 @@
       <van-cell-group inset v-show="form.ruleType==2">
         <van-field v-model="form.rule" label="页码" placeholder="请输入" />
       </van-cell-group>
+      <div class="page-rule-read" v-show="form.ruleType==2">
+        <div>
+          1、指定单页（9）
+        </div>
+        <div>
+          2、多页（2,3）
+        </div>
+        <div>
+          3、单页加区间输入（1,2-3）
+        </div>
+        <div>
+          4、区间输入（2-3,6-9）
+        </div>
+      </div>
     </div>
   </van-dialog>
 </template>
@@ -785,13 +799,22 @@
      * */
     const currentSignDom = ref('')
     const signDbClick = (e)=>{
+      cancelMore()
       let dom = e.currentTarget
+      let auth = $(dom).data('auth')
+      if(auth!=1){
+        showToast('无权限')
+        return
+      }
       currentSignDom.value = dom
       show.value = true
       form.value.ruleType = $(dom).data('ruleType')
       form.value.rule = $(dom).data('rule')
     }
 
+    /**
+     * validate input rule
+     * */
     const validateFree = (value) => {
       if (form.value.ruleType == 1) {
         return true
@@ -859,9 +882,13 @@
       }
       return true
     }
+    /**
+     * 批量创建，确定操作前触发检测
+     * */
+    const  check_result = ref(0)
     const checkMore = (action)=>{
       if(action == 'confirm'){
-        return validateFree(form.value.rule)
+        return check_result.value
       }else{
         return true
       }
@@ -871,6 +898,10 @@
      *  create signs by page's rule
      */
     const createMore = ()=>{
+      check_result.value = validateFree(form.value.rule)
+      if(!check_result.value){
+        return
+      }
       let scale = scaleReal.value
       let dom = currentSignDom.value
       let id =''
@@ -879,6 +910,9 @@
       let orgSealId = $(dom).data('orgSealId')
       let ruleType = form.value.ruleType
       let rule = form.value.rule
+      if(ruleType==1){
+        rule = ''
+      }
       let auth = 1
       let type = $(dom).data('type')
       let uniqueId = new Date().getTime()
@@ -1078,7 +1112,7 @@
       return false
     }
     /**
-     *  get signs data
+     *  get signature data
      *  */
     const sealList = ref([])
     const getSigns = ()=>{
@@ -1094,7 +1128,7 @@
     })
 
     /**
-     * init to get the data of pdf and review signs
+     * init to get the data of pdf and review signs , and load the pdf
      * */
     const pdfData =  ref()
     const getPdfData = () =>{
@@ -1104,8 +1138,8 @@
         if(res.code==0){
           pdfData.value = res.data
           title.value = res.data?.modelName || ''
-          DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
-          // DEFAULT_URL = res.data.wxSignFileUrl
+          // DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
+          DEFAULT_URL = res.data.wxSignFileUrl
           signData.value = res.data.signDetailBos && res.data.signDetailBos.map(it => {
             return {
               top: it.coordinateY,
@@ -1154,6 +1188,16 @@
 </script>
 
 <style lang="less" scoped>
+.page-rule-read{
+  width:100%;
+  border-top:1px solid #c8c9cc;
+  color: #409EFF;
+  font-size: 1rem;
+  padding:5px;
+  &>div{
+    margin-top:1rem;
+  }
+}
 .left-too-bar {
   width:20%;
   height:90vh;
