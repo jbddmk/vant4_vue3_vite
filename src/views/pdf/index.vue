@@ -1091,8 +1091,8 @@
         if(res.code==0){
           pdfData.value = res.data
           title.value = res.data?.modelName || ''
-          DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
-          // DEFAULT_URL = res.data.wxSignFileUrl
+          // DEFAULT_URL = '/remotefile' + res.data.signFileUrl.substring(res.data.signFileUrl.indexOf('/upload'))
+          DEFAULT_URL = res.data.wxSignFileUrl
           signData.value = res.data.signDetailBos && res.data.signDetailBos.map(it => {
             return {
               top: it.coordinateY,
