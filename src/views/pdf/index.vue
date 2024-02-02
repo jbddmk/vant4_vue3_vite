@@ -112,6 +112,20 @@
       <van-cell-group inset v-show="form.ruleType==2">
         <van-field v-model="form.rule" label="页码" placeholder="请输入" />
       </van-cell-group>
+      <div class="page-rule-read" v-show="form.ruleType==2">
+        <div>
+          1、指定单页（9）
+        </div>
+        <div>
+          2、多页（2,3）
+        </div>
+        <div>
+          3、单页加区间输入（1,2-3）
+        </div>
+        <div>
+          4、区间输入（2-3,6-9）
+        </div>
+      </div>
     </div>
   </van-dialog>
 </template>
@@ -797,6 +811,9 @@
       form.value.rule = $(dom).data('rule')
     }
 
+    /**
+     * validate input rule
+     * */
     const validateFree = (value) => {
       if (form.value.ruleType == 1) {
         return true
@@ -864,9 +881,13 @@
       }
       return true
     }
+    /**
+     * 批量创建，确定操作前触发检测
+     * */
+    const  check_result = ref(0)
     const checkMore = (action)=>{
       if(action == 'confirm'){
-        return validateFree(form.value.rule)
+        return check_result.value
       }else{
         return true
       }
@@ -876,6 +897,10 @@
      *  create signs by page's rule
      */
     const createMore = ()=>{
+      check_result.value = validateFree(form.value.rule)
+      if(!check_result.value){
+        return
+      }
       let scale = scaleReal.value
       let dom = currentSignDom.value
       let id =''
@@ -1150,6 +1175,16 @@
 </script>
 
 <style lang="less" scoped>
+.page-rule-read{
+  width:100%;
+  border-top:1px solid #c8c9cc;
+  color: #409EFF;
+  font-size: 1rem;
+  padding:5px;
+  &>div{
+    margin-top:1rem;
+  }
+}
 .left-too-bar {
   width:20%;
   height:90vh;
