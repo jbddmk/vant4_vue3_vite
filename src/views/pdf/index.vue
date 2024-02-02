@@ -784,7 +784,13 @@
      * */
     const currentSignDom = ref('')
     const signDbClick = (e)=>{
+      cancelMore()
       let dom = e.currentTarget
+      let auth = $(dom).data('auth')
+      if(auth!=1){
+        showToast('无权限')
+        return
+      }
       currentSignDom.value = dom
       show.value = true
       form.value.ruleType = $(dom).data('ruleType')
@@ -878,6 +884,9 @@
       let orgSealId = $(dom).data('orgSealId')
       let ruleType = form.value.ruleType
       let rule = form.value.rule
+      if(ruleType==1){
+        rule = ''
+      }
       let auth = 1
       let type = $(dom).data('type')
       let uniqueId = new Date().getTime()
@@ -1065,7 +1074,7 @@
       return false
     }
     /**
-     *  get signs data
+     *  get signature data
      *  */
     const sealList = ref([])
     const getSigns = ()=>{
@@ -1081,7 +1090,7 @@
     })
 
     /**
-     * init to get the data of pdf and review signs
+     * init to get the data of pdf and review signs , and load the pdf
      * */
     const pdfData =  ref()
     const getPdfData = () =>{
